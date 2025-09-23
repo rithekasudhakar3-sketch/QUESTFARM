@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Composting Champion</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; background: #f9fafb; }
+    h1 { color: #1f7a3a; }
+    section { margin-bottom: 20px; padding: 15px; background: #fff; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+    button { background: #1f7a3a; color: #fff; padding: 10px 15px; border: none; border-radius: 6px; cursor: pointer; }
+    button:hover { background: #166534; }
+    .quiz label { display: block; margin: 6px 0; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>🌱 Composting Champion</h1>
+    <p>
+      As a trained farmer, I know composting is the backbone of soil health.  
+      By recycling kitchen scraps and crop residues, I create nutrient-rich humus 
+      that improves yield while cutting fertilizer costs.
+    </p>
+
+    <!-- Quiz -->
+    <section class="quiz">
+      <h2>Quick Quiz</h2>
+      <p><strong>Which of these should NOT go into compost?</strong></p>
+      <label><input type="radio" name="q1"> Vegetable peels</label>
+      <label><input type="radio" name="q1"> Dry leaves</label>
+      <label><input type="radio" name="q1"> Plastic wrappers</label>
+      <button onclick="checkQuiz()">Submit Answer</button>
+      <p id="quizResult"></p>
+    </section>
+
+    <!-- Camera Upload -->
+    <section>
+      <h2>📷 Upload Proof</h2>
+      <p>Take a photo of your compost pile or bin:</p>
+      <input type="file" accept="image/*" capture="environment">
+    </section>
+
+    <!-- Location Capture -->
+    <section>
+      <h2>📍 Location Verification</h2>
+      <p>Confirm you are at your farm:</p>
+      <button onclick="getLocation()">Get My Location</button>
+      <p id="locationResult"></p>
+    </section>
+
+    <button onclick="history.back()">⬅ Back to Quests</button>
+  </main>
+
+  <script>
+    // Quiz Logic
+    function checkQuiz() {
+      const answers = document.getElementsByName("q1");
+      let selected = "";
+      for (const ans of answers) {
+        if (ans.checked) selected = ans.nextSibling.textContent.trim();
+      }
+      if (selected === "Plastic wrappers") {
+        document.getElementById("quizResult").textContent = "✅ Correct! Plastics harm compost quality.";
+      } else {
+        document.getElementById("quizResult").textContent = "❌ Try again. Think about what doesn’t decompose.";
+      }
+    }
+
+    // Location Logic
+    function getLocation() {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            const lat = pos.coords.latitude.toFixed(5);
+            const lon = pos.coords.longitude.toFixed(5);
+            document.getElementById("locationResult").textContent =
+              `✅ Location captured: ${lat}, ${lon}`;
+          },
+          () => {
+            document.getElementById("locationResult").textContent = "❌ Could not fetch location. Please allow access.";
+          }
+        );
+      } else {
+        document.getElementById("locationResult").textContent = "❌ Geolocation not supported.";
+      }
+    }
+  </script>
+</body>
+</html>

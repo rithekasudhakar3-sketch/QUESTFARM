@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Water Conservation Quiz — Proof Submission</title>
+
+  <!-- Styles -->
+  <style>
+    :root{--accent:#1f7a3a;--muted:#6b7280;--card:#fff}
+    body{font-family:Inter,system-ui,Arial;margin:0;background:#f3faf3;color:#0f172a;padding:20px}
+    .wrap{max-width:980px;margin:0 auto}
+    .card{background:var(--card);border-radius:10px;padding:18px;box-shadow:0 8px 30px rgba(2,6,23,0.06);margin-bottom:16px}
+    h1{margin:0 0 6px;font-size:20px}
+    p.lead{color:var(--muted);margin:0 0 12px}
+    .grid{display:grid;grid-template-columns:1fr 360px;gap:16px}
+    label{display:block;margin-bottom:6px;font-weight:600}
+    .muted{color:var(--muted);font-size:13px}
+    button{background:var(--accent);color:white;border:none;padding:10px 12px;border-radius:8px;cursor:pointer}
+    button.ghost{background:transparent;color:var(--accent);border:1px solid rgba(31,122,58,0.12)}
+    video{width:100%;height:220px;border-radius:8px;background:#000;object-fit:cover}
+    img.thumb{width:100%;height:220px;object-fit:cover;border-radius:8px;border:1px dashed #d1e7d1}
+    .controls{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+    .small{font-size:13px;color:var(--muted)}
+    .meta{font-size:13px;color:var(--muted);margin-top:8px}
+    ul.questions{list-style:none;padding:0;margin:0;display:grid;gap:12px}
+    .question{padding:10px;border-radius:8px;background:#f8fff8}
+    .success{background:linear-gradient(90deg,#def7e6,#c9f0d3);padding:12px;border-radius:8px;color:#065f46;font-weight:700;margin-top:12px}
+    /* Map */
+    #map { height: 400px; width: 100%; border: 2px solid green; margin-top:20px; }
+  </style>
+
+  <!-- piexifjs for EXIF insertion -->
+  <script src="https://cdn.jsdelivr.net/npm/piexifjs@1.0.6/piexif.min.js"></script>
+  <!-- Leaflet Map -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+</head>
+<body>
+  <div class="wrap">
+    <!-- QUIZ -->
+    <div class="card">
+      <h1>Water Conservation Quiz</h1>
+      <p class="lead">Answer the short quiz, then take/upload a photo as proof of your water-saving irrigation setup. The photo will include embedded geotag data (if you allow location).</p>
+
+      <div class="grid">
+        <!-- Left: quiz -->
+        <div>
+          <form id="quizForm">
+            <ul class="questions">
+              <li class="question">
+                <label>1. What is the most water-efficient irrigation method?</label>
+                <div><label><input type="radio" name="q1" value="drip" /> Drip irrigation</label></div>
+                <div><label><input type="radio" name="q1" value="sprinkler" /> Sprinkler irrigation</label></div>
+                <div><label><input type="radio" name="q1" value="flood" /> Flood irrigation</label></div>
+              </li>
+
+              <li class="question">
+                <label>2. Which practice reduces evaporation and conserves water?</label>
+                <div><label><input type="radio" name="q2" value="mulch" /> Using mulch</label></div>
+                <div><label><input type="radio" name="q2" value="burn" /> Burning crop residues</label></div>
+                <div><label><input type="radio" name="q2" value="overwater" /> Frequent over-watering</label></div>
+              </li>
+
+              <li class="question">
+                <label>3. How often should a soil moisture sensor be checked to optimize watering?</label>
+                <div><label><input type="radio" name="q3" value="daily" /> Daily (or as needed)</label></div>
+                <div><label><input type="radio" name="q3" value="yearly" /> Only once a year</label></div>
+                <div><label><input type="radio" name="q3" value="never" /> Never</label></div>
+              </li>
+            </ul>
+
+            <div style="margin-top:12px;display:flex;gap:8px;align-items:center">
+              <button type="button" id="gradeBtn">Grade Quiz</button>
+              <div id="score" class="muted">Score: —</div>
+            </div>
+            <div id="quizFeedback" class="meta"></div>
+          </form>
+        </div>
+
+        <!-- Right: Camera Proof -->
+        <div>
+          <div class="card" style="padding:0px">
+            <label>Live camera preview</label>
+            <video id="video" autoplay playsinline></video>
+            <canvas id="canvas" style="display:none"></canvas>
+
+            <div class="controls">
+              <button id="startCamBtn" type="button" class="ghost">Start Camera</button>
+              <button id="captureBtn" type="button">Take Photo</button>
+              <input id="fileInput" type="file" accept="image/*" capture="environment" style="display:none" />
+              <button id="downloadBtn" type="button" class="ghost">Download Photo</button>
+            </div>
+
+            <div style="margin-top:10px">
+              <label>Captured proof</label>
+              <img id="thumb" class="thumb" alt="No photo yet" />
+              <div id="photoMeta" class="meta">No photo taken</div>
+            </div>
+
+            <div style="margin-top:10px">
+              <button id="submitBtn" type="button">Submit Proof</button>
+              <div id="submitStatus" class="muted" style="margin-top:8px"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MAP -->
+    <div class="card">
+      <h2>Find My Location 🌍</h2>
+      <button onclick="getLocation()">Show My Location</button>
+      <p id="status"></p>
+      <div id="map"></div>
+    </div>
+
+    <div id="resultBox" class="card" style="display:none"></div>
+  </div>
+
+<!-- === JavaScript === -->
+<script>
+/* ---------- Config ---------- */
+const API_ENDPOINT = '/api/submit';
+
+/* Elements */
+const startCamBtn = document.getElementById('startCamBtn');
+const video = document.getElementById('video');
+const canvas = document.getElementById('canvas');
+const captureBtn = document.getElementById('captureBtn');
+const fileInput = document.getElementById('fileInput');
+const thumb = document.getElementById('thumb');
+const photoMeta = document.getElementById('photoMeta');
+const downloadBtn = document.getElementById('downloadBtn');
+const submitBtn = document.getElementById('submitBtn');
+const submitStatus = document.getElementById('submitStatus');
+const gradeBtn = document.getElementById('gradeBtn');
+const scoreEl = document.getElementById('score');
+const quizFeedback = document.getElementById('quizFeedback');
+const resultBox = document.getElementById('resultBox');
+
+let stream=null,lastPhotoBlob=null,lastPhotoDataUrl=null,lastCoords=null;
+
+/* ---------- Camera ---------- */
+async function startCamera(){
+  if(stream){ stream.getTracks().forEach(t=>t.stop()); stream=null; }
+  try{
+    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode:'environment' } });
+    video.srcObject=stream; startCamBtn.textContent='Stop Camera';
+  }catch(e){ alert("Camera error: "+e.message); }
+}
+function stopCamera(){
+  if(stream){ stream.getTracks().forEach(t=>t.stop()); stream=null; video.srcObject=null; startCamBtn.textContent='Start Camera'; }
+}
+startCamBtn.addEventListener('click',()=>{ stream?stopCamera():startCamera(); });
+
+function captureFrameToBlob(){
+  const w=video.videoWidth||1280,h=video.videoHeight||720;
+  canvas.width=w;canvas.height=h;
+  canvas.getContext('2d').drawImage(video,0,0,w,h);
+  return new Promise(res=>canvas.toBlob(res,'image/jpeg',0.92));
+}
+captureBtn.addEventListener('click',async()=>{
+  if(!stream) return alert("Start camera first");
+  const blob=await captureFrameToBlob();
+  try{ lastCoords=await getCurrentPosition({enableHighAccuracy:true,timeout:10000}); }
+  catch{ lastCoords=null; }
+  if(lastCoords){ 
+    lastPhotoDataUrl=await embedGpsInJpegDataUrl(blob,lastCoords); 
+    lastPhotoBlob=dataURLToBlob(lastPhotoDataUrl);
+  } else { 
+    lastPhotoBlob=blob; 
+    lastPhotoDataUrl=URL.createObjectURL(blob);
+  }
+  updateThumbAndMeta();
+  submitStatus.textContent="Photo captured";
+});
+
+/* ---------- Geolocation helper ---------- */
+function getCurrentPosition(opts){
+  return new Promise((res,rej)=>{
+    if(!navigator.geolocation) return rej(new Error("Not supported"));
+    navigator.geolocation.getCurrentPosition(p=>{
+      res({latitude:p.coords.latitude,longitude:p.coords.longitude,accuracy:p.coords.accuracy,altitude:p.coords.altitude||null,timestamp:p.timestamp});
+    },rej,opts);
+  });
+}
+
+/* ---------- EXIF Embed ---------- */
+function toDmsRational(dec){
+  dec=Math.abs(dec);const deg=Math.floor(dec);const minF=(dec-deg)*60;const min=Math.floor(minF);const sec=Math.round((minF-min)*60*100);
+  return [[deg,1],[min,1],[sec,100]];
+}
+async function embedGpsInJpegDataUrl(blob,coords){
+  const buf=await blob.arrayBuffer(); let bin=''; const bytes=new Uint8Array(buf);
+  for(let i=0;i<bytes.length;i+=0x8000){ bin+=String.fromCharCode.apply(null,bytes.subarray(i,i+0x8000)); }
+  const dataUrl="data:image/jpeg;base64,"+btoa(bin);
+  const gps={}; gps[piexif.GPSIFD.GPSLatitudeRef]=coords.latitude>=0?'N':'S';
+  gps[piexif.GPSIFD.GPSLatitude]=toDmsRational(coords.latitude);
+  gps[piexif.GPSIFD.GPSLongitudeRef]=coords.longitude>=0?'E':'W';
+  gps[piexif.GPSIFD.GPSLongitude]=toDmsRational(coords.longitude);
+  if(typeof coords.altitude==='number'){ gps[piexif.GPSIFD.GPSAltitude]=[Math.round(coords.altitude*100),100]; }
+  gps[piexif.GPSIFD.GPSDateStamp]=new Date(coords.timestamp).toISOString().split('T')[0];
+  return piexif.insert(piexif.dump({"GPS":gps}),dataUrl);
+}
+function dataURLToBlob(dataurl){
+  const [head,data]=dataurl.split(','),mime=head.match(/:(.*?);/)[1];
+  const bin=atob(data);const u8=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u8[i]=bin.charCodeAt(i);
+  return new Blob([u8],{type:mime});
+}
+function updateThumbAndMeta(){
+  if(!lastPhotoDataUrl){ thumb.src=''; photoMeta.textContent='No photo taken'; return; }
+  thumb.src=lastPhotoDataUrl; 
+  let txt="Photo captured"; 
+  if(lastCoords){ txt+=` • Lat:${lastCoords.latitude.toFixed(6)}, Lon:${lastCoords.longitude.toFixed(6)}`; }
+  photoMeta.textContent=txt;
+}
+
+/* ---------- Download ---------- */
+downloadBtn.addEventListener('click',()=>{
+  if(!lastPhotoDataUrl) return alert("No photo");
+  const a=document.createElement('a');a.href=lastPhotoDataUrl;a.download="proof.jpg";a.click();
+});
+
+/* ---------- Quiz ---------- */
+function gradeQuiz(){
+  let score=0;
+  if(document.querySelector('input[name="q1"]:checked')?.value==='drip')score++;
+  if(document.querySelector('input[name="q2"]:checked')?.value==='mulch')score++;
+  if(document.querySelector('input[name="q3"]:checked')?.value==='daily')score++;
+  const pct=Math.round((score/3)*100);
+  scoreEl.textContent=`Score: ${pct}%`;
+  quizFeedback.textContent=pct===100?"✅ Excellent!":"👍 Keep learning!";
+  return pct;
+}
+gradeBtn.addEventListener('click',gradeQuiz);
+
+/* ---------- Submit ---------- */
+submitBtn.addEventListener('click',async()=>{
+  if(!document.querySelector('input[name="q1"]:checked')||!document.querySelector('input[name="q2"]:checked')||!document.querySelector('input[name="q3"]:checked'))
+    return alert("Answer all questions");
+  if(!lastPhotoBlob) return alert("Take or upload a photo");
+  const score=gradeQuiz(); const meta={quest:"water-conservation",score,timestamp:Date.now(),coords:lastCoords};
+  const fd=new FormData(); fd.append("meta",JSON.stringify(meta)); fd.append("photo",lastPhotoBlob,"proof.jpg");
+  try{
+    const r=await fetch(API_ENDPOINT,{method:"POST",body:fd});
+    if(r.ok){ resultBox.style.display="block"; resultBox.innerHTML=`<div class="success">Submitted! Score ${score}</div>`; submitStatus.textContent="Submitted"; }
+    else throw new Error("Server error");
+  }catch(e){
+    resultBox.style.display="block"; resultBox.innerHTML=`<div class="success">Saved offline. Score ${score}</div>`;
+    submitStatus.textContent="Offline save";
+  }
+});
+
+/* ---------- Map ---------- */
+let map;
+function getLocation(){
+  if(navigator.geolocation){
+    navigator.geolocation.getCurrentPosition(showPosition,showError);
+    document.getElementById("status").innerText="Fetching location...";
+  }
+}
+function showPosition(p){
+  const lat=p.coords.latitude,lon=p.coords.longitude;
+  document.getElementById("status").innerText=`Lat:${lat}, Lon:${lon}`;
+  if(!map){ map=L.map('map').setView([lat,lon],15);L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:"&copy; OpenStreetMap"}).addTo(map); }
+  L.marker([lat,lon]).addTo(map).bindPopup("📍 You are here!").openPopup();
+}
+function showError(e){ document.getElementById("status").innerText="Location error"; }
+</script>
+</body>
+</html>
