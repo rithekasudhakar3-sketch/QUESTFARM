@@ -1,4 +1,13 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import React, { Component } from "react";
+import { createRoot } from 'react-dom/client';
+import App from '../App';
+import './i18n';
+
+const root = createRoot(document.getElementById('root'));
+root.render(
+  <App />
+);
+
 
 const Index = () => {
   return (

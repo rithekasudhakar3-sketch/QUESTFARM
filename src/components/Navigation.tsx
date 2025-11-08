@@ -1,22 +1,32 @@
 import { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Menu, X, Gamepad2, User, Trophy, MessageSquare, BookOpen, CheckSquare, Bot } from "lucide-react";
+import { Menu, X, Gamepad2, User, Trophy, MessageSquare, BookOpen, CheckSquare, Bot, LogOut, Joystick } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Navigation = () => {
   const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
+  const { isAuthenticated, user, logout } = useAuth();
 
   const navItems = [
     { name: "Home", path: "/", icon: Gamepad2 },
     { name: "Quests", path: "/quests", icon: BookOpen },
     { name: "Tasks", path: "/tasks", icon: CheckSquare },
+    { name: "Mini Games", path: "/mini-games", icon: Joystick },
     { name: "AI Chat", path: "/chatbot", icon: Bot },
     { name: "Profile", path: "/profile", icon: User },
     { name: "Contact", path: "/contact", icon: MessageSquare },
   ];
   
   const isActive = (path: string) => location.pathname === path;
+
+  const handleLogout = () => {
+    logout();
+    navigate("/");
+    setIsOpen(false);
+  };
 
   return (
     <nav className="bg-card border-b border-border shadow-nature">
@@ -49,6 +59,29 @@ const Navigation = () => {
                 </Link>
               );
             })}
+            {isAuthenticated ? (
+              <>
+                <div className="flex items-center space-x-2 px-3 py-2 text-sm">
+                  <User className="h-4 w-4" />
+                  <span className="font-medium">{user?.username}</span>
+                </div>
+                <Button
+                  variant="ghost"
+                  onClick={handleLogout}
+                  className="flex items-center space-x-2"
+                >
+                  <LogOut className="h-4 w-4" />
+                  <span>Logout</span>
+                </Button>
+              </>
+            ) : (
+              <Link to="/login">
+                <Button variant="quest" className="flex items-center space-x-2">
+                  <User className="h-4 w-4" />
+                  <span>Login</span>
+                </Button>
+              </Link>
+            )}
           </div>
 
           {/* Mobile menu button */}
@@ -86,6 +119,29 @@ const Navigation = () => {
                   </Link>
                 );
               })}
+              {isAuthenticated ? (
+                <>
+                  <div className="px-3 py-2 flex items-center space-x-2 text-sm border-t border-border mt-2 pt-2">
+                    <User className="h-4 w-4" />
+                    <span className="font-medium">{user?.username}</span>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    onClick={handleLogout}
+                    className="w-full justify-start flex items-center space-x-2"
+                  >
+                    <LogOut className="h-4 w-4" />
+                    <span>Logout</span>
+                  </Button>
+                </>
+              ) : (
+                <Link to="/login" onClick={() => setIsOpen(false)} className="block">
+                  <Button variant="quest" className="w-full justify-start flex items-center space-x-2">
+                    <User className="h-4 w-4" />
+                    <span>Login</span>
+                  </Button>
+                </Link>
+              )}
             </div>
           </div>
         )}
