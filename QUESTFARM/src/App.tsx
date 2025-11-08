@@ -12,38 +12,17 @@ import Profile from "./pages/Profile";
 import Contact from "./pages/Contact";
 import NotFound from "./pages/NotFound";
 import QuestWaterSaving from "./pages/QuestWaterSaving";
-import Login from "./pages/Login";
-import Signup from "./pages/Signup";
-import MiniGames from "./pages/MiniGames";
-import { AuthProvider } from "@/contexts/AuthContext";
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import './i18n';
 
-export function Home() {
-  const { t, i18n } = useTranslation();
-  const changeLanguage = (lang) => i18n.changeLanguage(lang);
-
-  return (
-    <div className="p-6">
-      <h1>{t("welcome")}</h1>
-      <button onClick={() => changeLanguage("en")}>English</button>
-      <button onClick={() => changeLanguage("ta")}>தமிழ்</button>
-      <button onClick={() => changeLanguage("hi")}>हिन्दी</button>
-      
-      <p>{t("startQuest")}</p>
-      <button>{t("uploadProof")}</button>
-    </div>
-  );
-}
-
-
-
 const queryClient = new QueryClient();
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <AuthProvider>
+const App = () => {
+  const { t } = useTranslation();
+
+  return (
+    <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <Toaster />
         <Sonner />
@@ -58,17 +37,13 @@ const App = () => (
               <Route path="/tasks" element={<Tasks />} />
               <Route path="/profile" element={<Profile />} />
               <Route path="/contact" element={<Contact />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/signup" element={<Signup />} />
-              <Route path="/mini-games" element={<MiniGames />} />
-              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
           </div>
         </BrowserRouter>
       </TooltipProvider>
-    </AuthProvider>
-  </QueryClientProvider>
-);
+    </QueryClientProvider>
+  );
+};
 
 export default App;
